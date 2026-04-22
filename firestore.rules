@@ -1,0 +1,147 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper Functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerified() {
+      return isSignedIn(); // Relaxed for immediate access after signup
+    }
+
+    function getExistingData() {
+      return resource.data;
+    }
+
+    function getIncomingData() {
+      return request.resource.data;
+    }
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    function getUserData(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data;
+    }
+
+    function isSchoolAdmin(schoolId) {
+      return isVerified() && (getUserData(request.auth.uid).role == 'admin' || request.auth.uid == get(/databases/$(database)/documents/schools/$(schoolId)).data.adminId);
+    }
+
+    function isSchoolTeacher(schoolId) {
+      return isVerified() && getUserData(request.auth.uid).schoolId == schoolId;
+    }
+
+    function isAtSchool(schoolId) {
+      return isVerified() && getUserData(request.auth.uid).schoolId == schoolId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // --- Users Collection ---
+    match /users/{userId} {
+      function isValidUser(data) {
+        return data.keys().hasAll(['name', 'email', 'role', 'schoolId', 'status']) &&
+               data.role in ['admin', 'teacher'];
+      }
+
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      
+      allow create: if isSignedIn() && isOwner(userId) && isValidUser(getIncomingData());
+      allow update: if isSignedIn() && isOwner(userId) &&
+                      getIncomingData().diff(getExistingData()).affectedKeys().hasOnly(['name', 'phone', 'status']);
+    }
+
+    // --- Schools Collection ---
+    match /schools/{schoolId} {
+      function isValidSchool(data) {
+        return data.adminId == request.auth.uid;
+      }
+
+      allow get: if true;
+      allow list: if true; 
+      
+      allow create: if isSignedIn() && isValidSchool(getIncomingData());
+      allow update: if isSignedIn() && isSchoolAdmin(schoolId);
+    }
+
+    // --- Classes Collection ---
+    match /classes/{classId} {
+      function isValidClass(data) {
+        return data.keys().hasAll(['schoolId', 'className', 'section', 'teacherId', 'createdAt']) &&
+               isValidId(data.schoolId);
+      }
+
+      allow read: if isVerified() && (resource.data.get('schoolId', '') == '' || resource.data.schoolId == getUserData(request.auth.uid).schoolId);
+      allow create: if isVerified() && isSchoolAdmin(getIncomingData().schoolId) && isValidClass(getIncomingData());
+      allow update: if isVerified() && isSchoolAdmin(getExistingData().schoolId) && isValidClass(getIncomingData()) &&
+                      getIncomingData().diff(getExistingData()).affectedKeys().hasOnly(['className', 'section', 'teacherId']);
+      allow delete: if isVerified() && (resource.data.get('schoolId', '') == '' || isSchoolAdmin(resource.data.schoolId) || isSchoolTeacher(resource.data.schoolId));
+    }
+
+    // --- Students Collection ---
+    match /students/{studentId} {
+      function isValidStudent(data) {
+        return data.keys().hasAll(['schoolId', 'classId', 'name', 'rollNumber', 'studentCode', 'createdAt', 'status']) &&
+               isValidId(data.schoolId) && isValidId(data.classId);
+      }
+
+      allow read: if isVerified() && (resource.data.get('schoolId', '') == '' || resource.data.schoolId == getUserData(request.auth.uid).schoolId);
+      allow create: if isVerified() && (isSchoolAdmin(getIncomingData().schoolId) || isSchoolTeacher(getIncomingData().schoolId)) && isValidStudent(getIncomingData());
+      allow update: if isVerified() && (isSchoolAdmin(getExistingData().schoolId) || isSchoolTeacher(getExistingData().schoolId)) && isValidStudent(getIncomingData()) &&
+                      getIncomingData().diff(getExistingData()).affectedKeys().hasOnly(['name', 'rollNumber', 'status', 'photoUrl', 'classId']);
+      allow delete: if isVerified() && (resource.data.get('schoolId', '') == '' || resource.data.schoolId == getUserData(request.auth.uid).schoolId);
+    }
+
+    // --- Attendance Sessions ---
+    match /attendance_sessions/{sessionId} {
+      function isValidSession(data) {
+        return data.keys().hasAll(['schoolId', 'classId', 'date', 'teacherId', 'createdAt', 'locked']) &&
+               data.teacherId == request.auth.uid;
+      }
+
+      allow read: if isVerified() && (resource.data.get('schoolId', '') == '' || resource.data.schoolId == getUserData(request.auth.uid).schoolId);
+      allow create: if isVerified() && isSchoolTeacher(getIncomingData().schoolId) && isValidSession(getIncomingData());
+      allow update: if isVerified() && (isSchoolAdmin(getExistingData().schoolId) || isSchoolTeacher(getExistingData().schoolId)) && isValidSession(getIncomingData()) &&
+                      getIncomingData().diff(getExistingData()).affectedKeys().hasOnly(['locked']);
+      allow delete: if isVerified() && (resource.data.get('schoolId', '') == '' || resource.data.schoolId == getUserData(request.auth.uid).schoolId);
+    }
+
+    // --- Attendance Records ---
+    match /attendance_records/{recordId} {
+      function isValidRecord(data) {
+        return data.keys().hasAll(['sessionId', 'studentId', 'status', 'markedAt', 'schoolId']) &&
+               data.status in ['present', 'absent', 'late'];
+      }
+
+      allow read: if isVerified() && (resource.data.get('schoolId', '') == '' || resource.data.schoolId == getUserData(request.auth.uid).schoolId);
+      allow create: if isVerified() && isValidRecord(getIncomingData());
+      allow update: if isVerified() && isValidRecord(getIncomingData()) &&
+                      getIncomingData().diff(getExistingData()).affectedKeys().hasOnly(['status', 'markedAt']);
+      allow delete: if isVerified() && (resource.data.get('schoolId', '') == '' || resource.data.schoolId == getUserData(request.auth.uid).schoolId);
+    }
+
+    // --- Reports Collection ---
+    match /reports/{reportId} {
+      function isValidReport(data) {
+        return data.keys().hasAll(['schoolId', 'studentId', 'teacherId', 'message', 'createdAt']) &&
+               data.schoolId == getUserData(request.auth.uid).schoolId &&
+               data.teacherId == request.auth.uid;
+      }
+
+      allow read: if isVerified() && (resource.data.get('schoolId', '') == '' || resource.data.schoolId == getUserData(request.auth.uid).schoolId);
+      allow create: if isVerified() && isSchoolTeacher(getUserData(request.auth.uid).schoolId) && isValidReport(getIncomingData());
+      allow delete: if isVerified() && (resource.data.get('schoolId', '') == '' || resource.data.schoolId == getUserData(request.auth.uid).schoolId);
+    }
+  }
+}

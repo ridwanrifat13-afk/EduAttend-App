@@ -1,0 +1,131 @@
+{
+  "entities": {
+    "school": {
+      "title": "School",
+      "description": "Represents a school entity",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "code": { "type": "string" },
+        "adminId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "address": { "type": "string" },
+        "phone": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "inactive"] }
+      },
+      "required": ["name", "code", "adminId", "createdAt"]
+    },
+    "user": {
+      "title": "User",
+      "description": "Represents a teacher or admin",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "teacher"] },
+        "schoolId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["active", "inactive"] }
+      },
+      "required": ["name", "email", "role", "schoolId", "createdAt"]
+    },
+    "class": {
+      "title": "Class",
+      "description": "Represents a class and section",
+      "type": "object",
+      "properties": {
+        "schoolId": { "type": "string" },
+        "className": { "type": "string" },
+        "section": { "type": "string" },
+        "teacherId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["schoolId", "className", "section", "createdAt"]
+    },
+    "student": {
+      "title": "Student",
+      "description": "Represents a student",
+      "type": "object",
+      "properties": {
+        "schoolId": { "type": "string" },
+        "classId": { "type": "string" },
+        "name": { "type": "string" },
+        "rollNumber": { "type": "string" },
+        "studentCode": { "type": "string" },
+        "photoUrl": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["active", "inactive"] }
+      },
+      "required": ["schoolId", "classId", "name", "rollNumber", "studentCode", "createdAt"]
+    },
+    "attendance_session": {
+      "title": "Attendance Session",
+      "description": "Represents a single attendance event for a class on a date",
+      "type": "object",
+      "properties": {
+        "schoolId": { "type": "string" },
+        "classId": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "teacherId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "locked": { "type": "boolean" }
+      },
+      "required": ["schoolId", "classId", "date", "teacherId", "createdAt"]
+    },
+    "attendance_record": {
+      "title": "Attendance Record",
+      "description": "Represents a student's status in a session",
+      "type": "object",
+      "properties": {
+        "sessionId": { "type": "string" },
+        "studentId": { "type": "string" },
+        "status": { "type": "string", "enum": ["present", "absent", "late"] },
+        "markedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["sessionId", "studentId", "status", "markedAt"]
+    },
+    "report": {
+      "title": "Report",
+      "description": "Student reports/notes",
+      "type": "object",
+      "properties": {
+        "studentId": { "type": "string" },
+        "teacherId": { "type": "string" },
+        "message": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["studentId", "teacherId", "message", "createdAt"]
+    }
+  },
+  "firestore": {
+    "schools/{schoolId}": {
+      "schema": "school",
+      "description": "School primary configuration"
+    },
+    "users/{userId}": {
+      "schema": "user",
+      "description": "User profiles (admins and teachers)"
+    },
+    "classes/{classId}": {
+      "schema": "class",
+      "description": "Class and section structure"
+    },
+    "students/{studentId}": {
+      "schema": "student",
+      "description": "Student database"
+    },
+    "attendance_sessions/{sessionId}": {
+      "schema": "attendance_session",
+      "description": "Attendance sessions for tracking sessions by date"
+    },
+    "attendance_records/{recordId}": {
+      "schema": "attendance_record",
+      "description": "Individual student attendance records linked to sessions"
+    },
+    "reports/{reportId}": {
+      "schema": "report",
+      "description": "Student behavioral or academic reports"
+    }
+  }
+}

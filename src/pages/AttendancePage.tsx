@@ -1,0 +1,311 @@
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { collection, query, where, getDocs, addDoc, serverTimestamp, setDoc, doc, deleteDoc } from 'firebase/firestore';
+import { db } from '../lib/firebase';
+import { useAuth } from '../App';
+import { ClassSection, Student, AttendanceStatus } from '../types';
+import { UserCheck, CheckCircle2, XCircle, Clock, AlertCircle, Save } from 'lucide-react';
+import { format } from 'date-fns';
+
+export default function AttendancePage() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const selectRef = React.useRef<HTMLSelectElement>(null);
+  const [classes, setClasses] = useState<ClassSection[]>([]);
+  const [selectedClass, setSelectedClass] = useState<string | null>(null);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [attendance, setAttendance] = useState<Record<string, AttendanceStatus>>({});
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [done, setDone] = useState(false);
+
+  const [alreadyTaken, setAlreadyTaken] = useState(false);
+
+  useEffect(() => {
+    if (user?.schoolId) {
+      fetchClasses();
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (selectedClass) {
+      fetchStudents();
+    }
+  }, [selectedClass]);
+
+  const fetchClasses = async () => {
+    if (!user?.schoolId) return;
+    try {
+      const q = query(
+        collection(db, 'classes'),
+        where('schoolId', '==', user.schoolId)
+      );
+      const snap = await getDocs(q);
+      const classesData = snap.docs.map(d => ({ id: d.id, ...d.data() } as ClassSection));
+      setClasses(classesData);
+      if (classesData.length > 0) {
+        setSelectedClass(classesData[0].id);
+      } else {
+        setLoading(false);
+      }
+    } catch (error) {
+      console.error("Error fetching classes:", error);
+      setLoading(false);
+    }
+  };
+
+  const fetchStudents = async (force: boolean = false) => {
+    if (!selectedClass || !user?.schoolId) return;
+    setLoading(true);
+    if (!force) setAlreadyTaken(false);
+    
+    try {
+      const today = format(new Date(), 'yyyy-MM-dd');
+      
+      if (!force) {
+        // 1. Check if session already exists for today
+        const sessionQuery = query(
+          collection(db, 'attendance_sessions'),
+          where('schoolId', '==', user.schoolId),
+          where('classId', '==', selectedClass),
+          where('date', '==', today)
+        );
+        const sessionSnap = await getDocs(sessionQuery);
+        
+        if (!sessionSnap.empty) {
+          setAlreadyTaken(true);
+          setLoading(false);
+          return;
+        }
+      }
+
+      // 2. Fetch students
+      const q = query(
+        collection(db, 'students'), 
+        where('schoolId', '==', user.schoolId),
+        where('classId', '==', selectedClass)
+      );
+      const snap = await getDocs(q);
+      const studentsData = snap.docs.map(d => ({ id: d.id, ...d.data() } as Student));
+      setStudents(studentsData);
+      
+      // Default all to present
+      const initialAttendance: Record<string, AttendanceStatus> = {};
+      studentsData.forEach(s => initialAttendance[s.id] = 'present');
+      setAttendance(initialAttendance);
+      if (force) {
+        setAlreadyTaken(false);
+        setDone(false);
+      }
+    } catch (e) {
+      console.error("Error fetching students:", e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateStatus = (studentId: string, status: AttendanceStatus) => {
+    setAttendance(prev => ({ ...prev, [studentId]: status }));
+  };
+
+  const handleDone = async () => {
+    if (!selectedClass || !user) return;
+    setSaving(true);
+    try {
+      const today = format(new Date(), 'yyyy-MM-dd');
+
+      // Find and delete any existing session for this class/day to ensure only the last one is saved
+      const sessionQuery = query(
+        collection(db, 'attendance_sessions'),
+        where('schoolId', '==', user.schoolId),
+        where('classId', '==', selectedClass),
+        where('date', '==', today)
+      );
+      const sessionSnap = await getDocs(sessionQuery);
+      
+      if (!sessionSnap.empty) {
+        for (const sessionDoc of sessionSnap.docs) {
+          // Delete associated records first
+          const recordsQuery = query(
+            collection(db, 'attendance_records'), 
+            where('schoolId', '==', user.schoolId),
+            where('sessionId', '==', sessionDoc.id)
+          );
+          const recordsSnap = await getDocs(recordsQuery);
+          const deleteRecordPromises = recordsSnap.docs.map(rd => deleteDoc(doc(db, 'attendance_records', rd.id)));
+          await Promise.all(deleteRecordPromises);
+          
+          // Delete the session itself
+          await deleteDoc(doc(db, 'attendance_sessions', sessionDoc.id));
+        }
+      }
+      
+      const counts = {
+        present: Object.values(attendance).filter(v => v === 'present').length,
+        absent: Object.values(attendance).filter(v => v === 'absent').length,
+        late: Object.values(attendance).filter(v => v === 'late').length,
+        total: students.length
+      };
+
+      // Create session with counts
+      const sessionRef = await addDoc(collection(db, 'attendance_sessions'), {
+        schoolId: user.schoolId,
+        classId: selectedClass,
+        date: today,
+        teacherId: user.uid,
+        createdAt: serverTimestamp(),
+        locked: true,
+        ...counts
+      });
+
+      // Create records
+      const recordPromises = students.map(student => {
+        const recordRef = doc(collection(db, 'attendance_records'));
+        return setDoc(recordRef, {
+          sessionId: sessionRef.id,
+          studentId: student.id,
+          status: attendance[student.id],
+          schoolId: user.schoolId,
+          markedAt: serverTimestamp()
+        });
+      });
+
+      await Promise.all(recordPromises);
+      setDone(true);
+    } catch (e) {
+      console.error(e);
+      alert('Error saving attendance. Please try again.');
+    }
+    setSaving(false);
+  };
+
+  const handleTakeAnother = () => {
+    setDone(false);
+    setAlreadyTaken(false);
+    setTimeout(() => {
+      selectRef.current?.focus();
+    }, 100);
+  };
+  if (loading) return (
+    <div className="h-[60vh] flex items-center justify-center bg-brand-50">
+      <div className="animate-spin w-8 h-8 border-4 border-brand-900 border-t-transparent rounded-full font-serif"></div>
+    </div>
+  );
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-8">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight mb-1">Manual Attendance</h1>
+          <p className="text-neutral-500 font-medium">Session for {format(new Date(), 'EEEE, MMMM dd')}</p>
+        </div>
+        <select 
+          ref={selectRef}
+          className="input-field py-2 text-sm max-w-[200px]"
+          value={selectedClass || ''}
+          onChange={(e) => setSelectedClass(e.target.value)}
+          disabled={saving}
+        >
+          {classes.map(c => <option key={c.id} value={c.id}>Class {c.className} - {c.section}</option>)}
+        </select>
+      </div>
+
+      {done || alreadyTaken ? (
+        <div className="glass-card p-12 text-center space-y-4">
+          <div className={`w-20 h-20 ${done ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-brand-900'} rounded-full flex items-center justify-center mx-auto mb-6`}>
+            {done ? <CheckCircle2 size={48} /> : <AlertCircle size={48} />}
+          </div>
+          <h2 className="text-2xl font-bold">{done ? 'Attendance Completed' : 'Attendance Already Logged'}</h2>
+          <p className="text-brand-900/50 max-w-sm mx-auto">
+            {done 
+              ? `Today's session for class ${classes.find(c => c.id === selectedClass)?.className} has been successfully logged.`
+              : `You have already taken attendance for class ${classes.find(c => c.id === selectedClass)?.className} today.`}
+          </p>
+          <div className="pt-4 space-x-4">
+            <button 
+              onClick={() => alreadyTaken ? fetchStudents(true) : handleTakeAnother()} 
+              className="btn-primary"
+            >
+              {alreadyTaken ? 'take another session' : 'Take Another Class'}
+            </button>
+            <button 
+              onClick={() => navigate('/history', { state: { classId: selectedClass } })} 
+              className="btn-secondary"
+            >
+              View History
+            </button>
+          </div>
+        </div>
+      ) : students.length > 0 ? (
+        <div className="space-y-6">
+          <div className="glass-card overflow-hidden">
+            <div className="grid grid-cols-12 px-6 py-4 bg-brand-900 text-brand-50 font-bold text-xs uppercase tracking-widest hidden md:grid">
+              <div className="col-span-1">Roll</div>
+              <div className="col-span-1">ID</div>
+              <div className="col-span-5">Student Name</div>
+              <div className="col-span-5 text-center">Mark Attendance</div>
+            </div>
+            
+            <div className="divide-y divide-brand-200/30">
+              {students.map((student) => (
+                <div key={student.id} className="grid grid-cols-1 md:grid-cols-12 px-4 md:px-6 py-5 items-center gap-4 hover:bg-brand-500/5 transition-colors">
+                  <div className="md:col-span-1 font-bold text-brand-900/30 font-mono text-sm">#{student.rollNumber}</div>
+                  <div className="md:col-span-1">
+                    <span className="text-[10px] font-bold bg-brand-200/40 text-brand-900 px-2 py-0.5 rounded-md uppercase tracking-tight">
+                      {student.studentCode}
+                    </span>
+                  </div>
+                  <div className="md:col-span-5 font-semibold text-neutral-800 text-lg md:text-base">{student.name}</div>
+                  <div className="md:col-span-5 flex justify-center gap-2 lg:gap-4">
+                    <button
+                      onClick={() => updateStatus(student.id, 'present')}
+                      className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all border ${attendance[student.id] === 'present' ? 'bg-brand-900 text-brand-50 border-brand-900 shadow-md shadow-brand-900/20' : 'bg-white text-brand-900/30 border-brand-200'}`}
+                    >
+                      <CheckCircle2 size={16} /> <span className="hidden sm:inline">Present</span>
+                    </button>
+                    <button
+                      onClick={() => updateStatus(student.id, 'late')}
+                      className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all border ${attendance[student.id] === 'late' ? 'bg-brand-500 text-brand-900 border-brand-500 shadow-md shadow-brand-500/20' : 'bg-white text-brand-900/30 border-brand-200'}`}
+                    >
+                      <Clock size={16} /> <span className="hidden sm:inline">Late</span>
+                    </button>
+                    <button
+                      onClick={() => updateStatus(student.id, 'absent')}
+                      className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all border ${attendance[student.id] === 'absent' ? 'bg-red-700 text-white border-red-700 shadow-md shadow-red-700/20' : 'bg-white text-brand-900/30 border-brand-200'}`}
+                    >
+                      <XCircle size={16} /> <span className="hidden sm:inline">Absent</span>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between p-6 glass-card bg-brand-900 border-none shadow-xl shadow-brand-900/20">
+            <div className="text-brand-50">
+              <p className="text-[10px] font-bold text-brand-50/40 uppercase tracking-widest mb-1">Session Summary</p>
+              <div className="flex gap-4">
+                <span className="text-sm font-bold text-brand-500">{Object.values(attendance).filter(v => v === 'present').length} Present</span>
+                <span className="text-sm font-bold text-brand-200">{Object.values(attendance).filter(v => v === 'late').length} Late</span>
+                <span className="text-sm font-bold text-red-300">{Object.values(attendance).filter(v => v === 'absent').length} Absent</span>
+              </div>
+            </div>
+            <button
+              onClick={handleDone}
+              disabled={saving}
+              className="px-8 py-3 bg-brand-50 text-brand-900 rounded-2xl font-bold flex items-center gap-2 hover:bg-brand-200 transition-all disabled:opacity-50"
+            >
+              {saving ? <div className="w-5 h-5 border-2 border-brand-900/30 border-t-brand-900 rounded-full animate-spin"></div> : <Save size={18} />}
+              Done
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="glass-card p-20 text-center space-y-4">
+          <AlertCircle size={48} className="text-neutral-300 mx-auto" />
+          <p className="text-neutral-400 font-medium italic">No students found in this class.</p>
+        </div>
+      )}
+    </div>
+  );
+}
