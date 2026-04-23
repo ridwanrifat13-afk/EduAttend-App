@@ -150,12 +150,12 @@ export default function AuthPage() {
 
             {!isLogin && (
               <div className="relative">
-                <User className="absolute left-4 top-3.5 text-brand-500" size={18} />
+                <User className="absolute left-0 top-3.5 text-brand-500" size={18} />
                 <input
                   type="text"
                   placeholder="Full Name"
                   required
-                  className="input-field pl-11"
+                  className="input-field pl-5"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                 />
@@ -163,12 +163,12 @@ export default function AuthPage() {
             )}
 
             <div className="relative">
-              <Mail className="absolute left-4 top-3.5 text-brand-500" size={18} />
+              <Mail className="absolute left-0 top-3.5 text-brand-500" size={18} />
               <input
                 type="email"
                 placeholder="Email Address"
                 required
-                className="input-field pl-11"
+                className="input-field pl-5"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
@@ -176,12 +176,12 @@ export default function AuthPage() {
 
             {!isLogin && (
               <div className="relative">
-                <Phone className="absolute left-4 top-3.5 text-brand-500" size={18} />
+                <Phone className="absolute left-0 top-3.5 text-brand-500" size={18} />
                 <input
                   type="tel"
                   placeholder="Phone Number"
                   required
-                  className="input-field pl-11"
+                  className="input-field pl-5"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                 />
@@ -190,12 +190,12 @@ export default function AuthPage() {
 
             {!isLogin && role === 'admin' && (
               <div className="relative">
-                <SchoolIcon className="absolute left-4 top-3.5 text-brand-500" size={18} />
+                <SchoolIcon className="absolute left-0 top-3.5 text-brand-500" size={18} />
                 <input
                   type="text"
                   placeholder="School Name"
                   required
-                  className="input-field pl-11"
+                  className="input-field pl-5"
                   value={schoolName}
                   onChange={(e) => setSchoolName(e.target.value)}
                 />
@@ -204,12 +204,12 @@ export default function AuthPage() {
 
             {!isLogin && role === 'teacher' && (
               <div className="relative">
-                <Hash className="absolute left-4 top-3.5 text-brand-500" size={18} />
+                <Hash className="absolute left-0 top-3.5 text-brand-500" size={18} />
                 <input
                   type="text"
                   placeholder="Invite Code (e.g. SCH-XXXXXX)"
                   required
-                  className="input-field pl-11"
+                  className="input-field pl-5"
                   value={schoolPassword}
                   onChange={(e) => setSchoolPassword(e.target.value)}
                 />
@@ -217,12 +217,12 @@ export default function AuthPage() {
             )}
 
             <div className="relative">
-              <Lock className="absolute left-4 top-3.5 text-brand-500" size={18} />
+              <Lock className="absolute left-0 top-3.5 text-brand-500" size={18} />
               <input
                 type="password"
                 placeholder="Login Password"
                 required
-                className="input-field pl-11"
+                className="input-field pl-5"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
