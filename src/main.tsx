@@ -12,22 +12,17 @@ window.addEventListener("online", () => {
   console.log("Back online — syncing data");
 });
 
+// Unregister all Service Workers to fix white screen/cache issues
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.getRegistrations().then((registrations) => {
+    for (const registration of registrations) {
+      registration.unregister();
+    }
+  });
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />
   </StrictMode>,
 );
-
-// Register Service Worker
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker
-      .register("/service-worker.js")
-      .then(() => {
-        console.log("Service Worker registered");
-      })
-      .catch((error) => {
-        console.log("Service Worker registration failed:", error);
-      });
-  });
-}

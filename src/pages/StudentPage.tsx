@@ -152,7 +152,7 @@ export default function StudentPage() {
       const newStudentLocal: Student = {
         id: studentId,
         ...studentData,
-        createdAt: new Date() as any, // Temporary for local view
+        createdAt: Timestamp.now(), // Use real Timestamp to avoid .toDate() crashes
       } as any;
       
       setStudents(prev => [...prev, newStudentLocal].sort((a, b) => a.name.localeCompare(b.name)));

@@ -124,7 +124,7 @@ export default function AdminDashboard() {
       const savePromise = setDoc(classRef, classData);
       
       // Update local state immediately
-      const newClassLocal = { id: classId, ...classData, createdAt: new Date() as any };
+      const newClassLocal = { id: classId, ...classData, createdAt: Timestamp.now() };
       setClasses(prev => [...prev, newClassLocal as any]);
       
       setIsAddClassOpen(false);
