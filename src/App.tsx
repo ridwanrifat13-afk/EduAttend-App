@@ -5,6 +5,7 @@ import { doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from './lib/firebase';
 import { UserProfile } from './types';
 import { LogOut, LayoutDashboard, UserCheck, Users, History as HistoryIcon, Settings, Menu, X, School } from 'lucide-react';
+import { Analytics } from '@vercel/analytics/react';
 import AuthPage from './pages/AuthPage';
 import TeacherDashboard from './pages/TeacherDashboard';
 import AdminDashboard from './pages/AdminDashboard';
@@ -225,6 +226,7 @@ export default function App() {
           <Route path="/" element={<Navigate to="/auth" />} />
         </Routes>
       </BrowserRouter>
+      <Analytics />
     </AuthContext.Provider>
   );
 }
