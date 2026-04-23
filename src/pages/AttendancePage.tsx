@@ -111,35 +111,17 @@ export default function AttendancePage() {
   const handleDone = async () => {
     if (!selectedClass || !user) return;
     setSaving(true);
+    
     try {
       const today = format(new Date(), 'yyyy-MM-dd');
 
-      // Find and delete any existing session for this class/day to ensure only the last one is saved
-      const sessionQuery = query(
-        collection(db, 'attendance_sessions'),
-        where('schoolId', '==', user.schoolId),
-        where('classId', '==', selectedClass),
-        where('date', '==', today)
-      );
-      const sessionSnap = await getDocs(sessionQuery);
+      // PREDICTABLE IDs: This is the key for offline-first "Fire-and-Forget" logic.
+      // By using deterministic IDs, we skip the need to "find" and "delete" old records.
+      // Firestore will simply overwrite the existing document if it exists.
       
-      if (!sessionSnap.empty) {
-        for (const sessionDoc of sessionSnap.docs) {
-          // Delete associated records first
-          const recordsQuery = query(
-            collection(db, 'attendance_records'), 
-            where('schoolId', '==', user.schoolId),
-            where('sessionId', '==', sessionDoc.id)
-          );
-          const recordsSnap = await getDocs(recordsQuery);
-          const deleteRecordPromises = recordsSnap.docs.map(rd => deleteDoc(doc(db, 'attendance_records', rd.id)));
-          await Promise.all(deleteRecordPromises);
-          
-          // Delete the session itself
-          await deleteDoc(doc(db, 'attendance_sessions', sessionDoc.id));
-        }
-      }
-      
+      const sessionId = `SES_${user.schoolId}_${selectedClass}_${today}`;
+      const sessionRef = doc(db, 'attendance_sessions', sessionId);
+
       const counts = {
         present: Object.values(attendance).filter(v => v === 'present').length,
         absent: Object.values(attendance).filter(v => v === 'absent').length,
@@ -147,10 +129,6 @@ export default function AttendancePage() {
         total: students.length
       };
       
-      // Prepare session reference manually to get the ID for records without awaiting
-      const sessionRef = doc(collection(db, 'attendance_sessions'));
-      const sessionId = sessionRef.id;
-
       const sessionPromise = setDoc(sessionRef, {
         schoolId: user.schoolId,
         classId: selectedClass,
@@ -161,9 +139,12 @@ export default function AttendancePage() {
         ...counts
       });
 
-      // Create records promises
+      // Create records promises with predictable record IDs
       const recordPromises = students.map(student => {
-        const recordRef = doc(collection(db, 'attendance_records'));
+        // Unique record ID based on session and student
+        const recordId = `REC_${user.schoolId}_${sessionId}_${student.id}`;
+        const recordRef = doc(db, 'attendance_records', recordId);
+        
         return setDoc(recordRef, {
           sessionId: sessionId,
           studentId: student.id,
@@ -174,25 +155,22 @@ export default function AttendancePage() {
       });
 
       // Optimistic UI Update: Show success screen immediately
+      // NO MORE BUFFERING! We transition the UI without waiting for network.
       setDone(true);
       setSaving(false);
 
-      // Fire-and-Forget: complete the writes in the background
+      // Fire-and-Forget: complete the writes in the background via local cache
       Promise.all([sessionPromise, ...recordPromises])
         .then(() => {
-          console.log("Attendance sync complete (Server/Cache)");
+          console.log("✅ Attendance synced/cached successfully");
         })
         .catch(err => {
           console.error("Delayed sync error:", err);
-          // In a real app, you might want to show a subtle notification if sync fails
         });
       
     } catch (e) {
       console.error("Save error:", e);
-      // We still alert because if it hits here, it might be a permission error 
-      // or something that local cache won't solve.
       alert("Attendance saved locally. It will sync when online.");
-      // Ensure UI state is consistent
       setSaving(false);
     }
   };
