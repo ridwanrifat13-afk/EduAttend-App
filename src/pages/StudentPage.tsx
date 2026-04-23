@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, where, getDocs, Timestamp, doc, getDoc, deleteDoc, setDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, serverTimestamp, doc, getDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../App';
 import { ClassSection, Student, StudentReport } from '../types';
@@ -132,44 +132,21 @@ export default function StudentPage() {
     setFormError('');
 
     try {
-      const studentData = {
+      await addDoc(collection(db, 'students'), {
         schoolId: user.schoolId,
         classId: selectedClass,
         name: newStudentName.trim(),
         studentCode: newStudentCode.trim(),
         rollNumber: newStudentRoll.trim(),
-        createdAt: Timestamp.now(),
+        createdAt: serverTimestamp(),
         status: 'active'
-      };
-
-      const studentRef = doc(collection(db, 'students'));
-      const studentId = studentRef.id;
-
-      // Start saving in background
-      const savePromise = setDoc(studentRef, studentData);
+      });
       
-      // Optimistically update UI
-      const newStudentLocal: Student = {
-        id: studentId,
-        ...studentData,
-        createdAt: Timestamp.now(), // Use real Timestamp to avoid .toDate() crashes
-      } as any;
-      
-      setStudents(prev => [...prev, newStudentLocal].sort((a, b) => a.name.localeCompare(b.name)));
       setShowAddStudent(false);
       setNewStudentName('');
       setNewStudentCode('');
       setNewStudentRoll('');
-      
-      // Background sync: verify and refresh once persistent
-      savePromise.then(() => {
-        console.log("Student profile saved and synced");
-        // No need to full fetch unless it fails
-      }).catch(err => {
-        console.error("Delayed student sync error:", err);
-        alert("Possible sync error for new student profile. Check your connection.");
-      });
-
+      fetchStudents();
     } catch (err: any) {
       console.error("Error adding student:", err);
       setFormError(err.message || 'Failed to create student. Please check your permissions.');
@@ -218,26 +195,17 @@ export default function StudentPage() {
   const handleAddReport = async () => {
     if (!selectedStudent || !user || !reportText) return;
     
-    const reportData = {
+    await addDoc(collection(db, 'reports'), {
       schoolId: user.schoolId,
       studentId: selectedStudent.id,
       teacherId: user.uid,
       message: reportText,
-      createdAt: Timestamp.now()
-    };
-
-    const reportRef = doc(collection(db, 'reports'));
-    const savePromise = setDoc(reportRef, reportData);
+      createdAt: serverTimestamp()
+    });
     
     setReportText('');
     setShowReportModal(false);
-    
-    // Optimistic UI: If we were showing reports in a list, we'd add it here.
-    // Currently viewStudentDetails fetches them. 
-    // We'll trigger the refresh in the background.
-    savePromise.then(() => {
-      viewStudentDetails(selectedStudent);
-    });
+    viewStudentDetails(selectedStudent); // refresh
   };
 
   const handleDeleteStudent = async () => {

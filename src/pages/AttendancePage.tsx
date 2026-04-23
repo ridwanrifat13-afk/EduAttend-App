@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { collection, query, where, getDocs, Timestamp, setDoc, doc, deleteDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, serverTimestamp, setDoc, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../App';
 import { ClassSection, Student, AttendanceStatus } from '../types';
@@ -111,68 +111,72 @@ export default function AttendancePage() {
   const handleDone = async () => {
     if (!selectedClass || !user) return;
     setSaving(true);
-    
     try {
       const today = format(new Date(), 'yyyy-MM-dd');
 
-      // PREDICTABLE IDs: This is the key for offline-first "Fire-and-Forget" logic.
-      // By using deterministic IDs, we skip the need to "find" and "delete" old records.
-      // Firestore will simply overwrite the existing document if it exists.
+      // Find and delete any existing session for this class/day to ensure only the last one is saved
+      const sessionQuery = query(
+        collection(db, 'attendance_sessions'),
+        where('schoolId', '==', user.schoolId),
+        where('classId', '==', selectedClass),
+        where('date', '==', today)
+      );
+      const sessionSnap = await getDocs(sessionQuery);
       
-      const sessionId = `SES_${user.schoolId}_${selectedClass}_${today}`;
-      const sessionRef = doc(db, 'attendance_sessions', sessionId);
-
+      if (!sessionSnap.empty) {
+        for (const sessionDoc of sessionSnap.docs) {
+          // Delete associated records first
+          const recordsQuery = query(
+            collection(db, 'attendance_records'), 
+            where('schoolId', '==', user.schoolId),
+            where('sessionId', '==', sessionDoc.id)
+          );
+          const recordsSnap = await getDocs(recordsQuery);
+          const deleteRecordPromises = recordsSnap.docs.map(rd => deleteDoc(doc(db, 'attendance_records', rd.id)));
+          await Promise.all(deleteRecordPromises);
+          
+          // Delete the session itself
+          await deleteDoc(doc(db, 'attendance_sessions', sessionDoc.id));
+        }
+      }
+      
       const counts = {
         present: Object.values(attendance).filter(v => v === 'present').length,
         absent: Object.values(attendance).filter(v => v === 'absent').length,
         late: Object.values(attendance).filter(v => v === 'late').length,
         total: students.length
       };
-      
-      const sessionPromise = setDoc(sessionRef, {
+
+      // Create session with counts
+      const sessionRef = await addDoc(collection(db, 'attendance_sessions'), {
         schoolId: user.schoolId,
         classId: selectedClass,
         date: today,
         teacherId: user.uid,
-        createdAt: Timestamp.now(),
+        createdAt: serverTimestamp(),
         locked: true,
         ...counts
       });
 
-      // Create records promises with predictable record IDs
+      // Create records
       const recordPromises = students.map(student => {
-        // Unique record ID based on session and student
-        const recordId = `REC_${user.schoolId}_${sessionId}_${student.id}`;
-        const recordRef = doc(db, 'attendance_records', recordId);
-        
+        const recordRef = doc(collection(db, 'attendance_records'));
         return setDoc(recordRef, {
-          sessionId: sessionId,
+          sessionId: sessionRef.id,
           studentId: student.id,
           status: attendance[student.id],
           schoolId: user.schoolId,
-          markedAt: Timestamp.now()
+          markedAt: serverTimestamp()
         });
       });
 
-      // Optimistic UI Update: Show success screen immediately
-      // NO MORE BUFFERING! We transition the UI without waiting for network.
+      await Promise.all(recordPromises);
       setDone(true);
-      setSaving(false);
-
-      // Fire-and-Forget: complete the writes in the background via local cache
-      Promise.all([sessionPromise, ...recordPromises])
-        .then(() => {
-          console.log("✅ Attendance synced/cached successfully");
-        })
-        .catch(err => {
-          console.error("Delayed sync error:", err);
-        });
-      
     } catch (e) {
-      console.error("Save error:", e);
-      alert("Attendance saved locally. It will sync when online.");
-      setSaving(false);
+      console.error(e);
+      alert('Error saving attendance. Please try again.');
     }
+    setSaving(false);
   };
 
   const handleTakeAnother = () => {

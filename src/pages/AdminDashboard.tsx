@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, where, getDocs, setDoc, Timestamp, doc } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, serverTimestamp, doc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../App';
 import { ClassSection, Student, AttendanceRecord, AttendanceSession } from '../types';
@@ -109,33 +109,19 @@ export default function AdminDashboard() {
     if (!user?.schoolId || !newClassName || !newSection) return;
     setIsSaving(true);
     try {
-      const classData = {
+      await addDoc(collection(db, 'classes'), {
         schoolId: user.schoolId,
         className: newClassName,
         section: newSection,
         teacherId: user.uid, // Admin acts as teacher by default or can reassign
-        createdAt: Timestamp.now()
-      };
-
-      const classRef = doc(collection(db, 'classes'));
-      const classId = classRef.id;
-
-      // Optimistic save
-      const savePromise = setDoc(classRef, classData);
-      
-      // Update local state immediately
-      const newClassLocal = { id: classId, ...classData, createdAt: Timestamp.now() };
-      setClasses(prev => [...prev, newClassLocal as any]);
-      
+        createdAt: serverTimestamp()
+      });
       setIsAddClassOpen(false);
       setNewClassName('');
       setNewSection('');
-      
-      // Background sync
-      savePromise.then(() => fetchAllData());
+      fetchAllData();
     } catch (error) {
       console.error("Error adding class:", error);
-      alert("Error adding class. It will sync when online.");
     } finally {
       setIsSaving(false);
     }
