@@ -16,7 +16,7 @@ import {
   Filler
 } from 'chart.js';
 import { Users, TrendingUp, TrendingDown, ChevronLeft, ChevronRight, Filter, Clock } from 'lucide-react';
-import { startOfYear, startOfMonth, startOfWeek, format, subDays, isSameDay, eachDayOfInterval } from 'date-fns';
+import { startOfYear, startOfMonth, endOfMonth, startOfWeek, format, subDays, isSameDay, eachDayOfInterval } from 'date-fns';
 
 ChartJS.register(
   CategoryScale,
@@ -213,8 +213,8 @@ export default function TeacherDashboard() {
       });
     } else {
       // Weekly or Monthly - Show ALL dates in range relative to pivotDate
-      const end = pivotDate;
-      const start = timeRange === 'weekly' ? subDays(end, 6) : startOfMonth(end);
+      const end = timeRange === 'monthly' ? endOfMonth(pivotDate) : pivotDate;
+      const start = timeRange === 'weekly' ? subDays(end, 6) : startOfMonth(pivotDate);
       const interval = eachDayOfInterval({ start, end });
 
       labels = interval.map(date => format(date, timeRange === 'weekly' ? 'EEE (dd/MM)' : 'dd'));

@@ -6,6 +6,7 @@ import { useAuth } from '../App';
 import { ClassSection, Student, AttendanceStatus } from '../types';
 import { UserCheck, CheckCircle2, XCircle, Clock, AlertCircle, Save } from 'lucide-react';
 import { format } from 'date-fns';
+import { motion, AnimatePresence } from 'motion/react';
 
 export default function AttendancePage() {
   const { user } = useAuth();
@@ -210,102 +211,155 @@ export default function AttendancePage() {
         </select>
       </div>
 
-      {done || alreadyTaken ? (
-        <div className="glass-card p-12 text-center space-y-4">
-          <div className={`w-20 h-20 ${done ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-brand-900'} rounded-full flex items-center justify-center mx-auto mb-6`}>
-            {done ? <CheckCircle2 size={48} /> : <AlertCircle size={48} />}
-          </div>
-          <h2 className="text-2xl font-bold">{done ? 'Attendance Completed' : 'Attendance Already Logged'}</h2>
-          <p className="text-brand-900/50 max-w-sm mx-auto">
-            {done 
-              ? `Today's session for class ${classes.find(c => c.id === selectedClass)?.className} has been successfully logged.`
-              : `You have already taken attendance for class ${classes.find(c => c.id === selectedClass)?.className} today.`}
-          </p>
-          <div className="pt-4 space-x-4">
-            <button 
-              onClick={() => alreadyTaken ? fetchStudents(true) : handleTakeAnother()} 
-              className="btn-primary"
+      <AnimatePresence mode="wait">
+        {done || alreadyTaken ? (
+          <motion.div 
+            key="success"
+            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: -10 }}
+            transition={{ duration: 0.4, type: "spring", bounce: 0.4 }}
+            className="glass-card p-12 text-center space-y-4 shadow-2xl shadow-brand-900/5 border-none bg-white/70"
+          >
+            <motion.div 
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ delay: 0.2, type: "spring", stiffness: 200, damping: 15 }}
+              className={`w-28 h-28 ${done ? 'bg-brand-900 text-brand-50' : 'bg-brand-100/50 text-brand-900'} rounded-[2rem] flex items-center justify-center mx-auto mb-8 shadow-2xl ${done ? 'shadow-brand-900/40 rotate-3' : '-rotate-3 shadow-brand-900/10'} transition-transform duration-500`}
             >
-              {alreadyTaken ? 'take another session' : 'Take Another Class'}
-            </button>
-            <button 
-              onClick={() => navigate('/history', { state: { classId: selectedClass } })} 
-              className="btn-secondary"
-            >
-              View History
-            </button>
-          </div>
-        </div>
-      ) : students.length > 0 ? (
-        <div className="space-y-6">
-          <div className="glass-card overflow-hidden">
-            <div className="grid grid-cols-12 px-6 py-4 bg-brand-900 text-brand-50 font-bold text-xs uppercase tracking-widest hidden md:grid">
-              <div className="col-span-1">Roll</div>
-              <div className="col-span-1">ID</div>
-              <div className="col-span-5">Student Name</div>
-              <div className="col-span-5 text-center">Mark Attendance</div>
-            </div>
+              <motion.div
+                initial={{ rotate: -90, scale: 0.5, opacity: 0 }}
+                animate={{ rotate: 0, scale: 1, opacity: 1 }}
+                transition={{ delay: 0.3, type: "spring", stiffness: 200, damping: 20 }}
+              >
+                {done ? <CheckCircle2 size={56} strokeWidth={2.5} /> : <AlertCircle size={56} strokeWidth={2.5} />}
+              </motion.div>
+            </motion.div>
             
-            <div className="divide-y divide-brand-200/30">
-              {students.map((student) => (
-                <div key={student.id} className="grid grid-cols-1 md:grid-cols-12 px-4 md:px-6 py-5 items-center gap-4 hover:bg-brand-500/5 transition-colors">
-                  <div className="md:col-span-1 font-bold text-brand-900/30 font-mono text-sm">#{student.rollNumber}</div>
-                  <div className="md:col-span-1">
-                    <span className="text-[10px] font-bold bg-brand-200/40 text-brand-900 px-2 py-0.5 rounded-md uppercase tracking-tight">
-                      {student.studentCode}
-                    </span>
+            <motion.h2 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="text-4xl font-bold tracking-tight text-neutral-900"
+            >
+              {done ? 'Attendance Logged!' : 'Already Logged'}
+            </motion.h2>
+            
+            <motion.p 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="text-neutral-500 max-w-sm mx-auto text-lg leading-relaxed"
+            >
+              {done 
+                ? `Today's session for class ${classes.find(c => c.id === selectedClass)?.className} has been successfully recorded.`
+                : `You have already taken attendance for class ${classes.find(c => c.id === selectedClass)?.className} today.`}
+            </motion.p>
+            
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+              className="pt-8 space-x-0 space-y-3 sm:space-y-0 sm:space-x-4 flex flex-col sm:flex-row justify-center max-w-md mx-auto"
+            >
+              <button 
+                onClick={() => alreadyTaken ? fetchStudents(true) : handleTakeAnother()} 
+                className="btn-primary w-full sm:w-auto px-8 py-3.5 shadow-xl shadow-brand-900/10 hover:-translate-y-1"
+              >
+                {alreadyTaken ? 'Take Another Session' : 'Take Another Class'}
+              </button>
+              <button 
+                onClick={() => navigate('/history', { state: { classId: selectedClass } })} 
+                className="btn-secondary w-full sm:w-auto px-8 py-3.5 bg-white border border-brand-200 shadow-sm hover:bg-brand-50 hover:-translate-y-1 transition-all"
+              >
+                View History
+              </button>
+            </motion.div>
+          </motion.div>
+        ) : students.length > 0 ? (
+          <motion.div 
+            key="list"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.3 }}
+            className="space-y-6"
+          >
+            <div className="glass-card overflow-hidden">
+              <div className="grid grid-cols-12 px-6 py-4 bg-brand-900 text-brand-50 font-bold text-xs uppercase tracking-widest hidden md:grid">
+                <div className="col-span-1">Roll</div>
+                <div className="col-span-1">ID</div>
+                <div className="col-span-5">Student Name</div>
+                <div className="col-span-5 text-center">Mark Attendance</div>
+              </div>
+              
+              <div className="divide-y divide-brand-200/30">
+                {students.map((student) => (
+                  <div key={student.id} className="grid grid-cols-1 md:grid-cols-12 px-4 md:px-6 py-5 items-center gap-4 hover:bg-brand-500/5 transition-colors">
+                    <div className="md:col-span-1 font-bold text-brand-900/30 font-mono text-sm">#{student.rollNumber}</div>
+                    <div className="md:col-span-1">
+                      <span className="text-[10px] font-bold bg-brand-200/40 text-brand-900 px-2 py-0.5 rounded-md uppercase tracking-tight">
+                        {student.studentCode}
+                      </span>
+                    </div>
+                    <div className="md:col-span-5 font-semibold text-neutral-800 text-lg md:text-base">{student.name}</div>
+                    <div className="md:col-span-5 flex justify-center gap-2 lg:gap-4">
+                      <button
+                        onClick={() => updateStatus(student.id, 'present')}
+                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all border ${attendance[student.id] === 'present' ? 'bg-brand-900 text-brand-50 border-brand-900 shadow-md shadow-brand-900/20' : 'bg-white text-brand-900/30 border-brand-200'}`}
+                      >
+                        <CheckCircle2 size={16} /> <span className="hidden sm:inline">Present</span>
+                      </button>
+                      <button
+                        onClick={() => updateStatus(student.id, 'late')}
+                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all border ${attendance[student.id] === 'late' ? 'bg-brand-500 text-brand-900 border-brand-500 shadow-md shadow-brand-500/20' : 'bg-white text-brand-900/30 border-brand-200'}`}
+                      >
+                        <Clock size={16} /> <span className="hidden sm:inline">Late</span>
+                      </button>
+                      <button
+                        onClick={() => updateStatus(student.id, 'absent')}
+                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all border ${attendance[student.id] === 'absent' ? 'bg-red-700 text-white border-red-700 shadow-md shadow-red-700/20' : 'bg-white text-brand-900/30 border-brand-200'}`}
+                      >
+                        <XCircle size={16} /> <span className="hidden sm:inline">Absent</span>
+                      </button>
+                    </div>
                   </div>
-                  <div className="md:col-span-5 font-semibold text-neutral-800 text-lg md:text-base">{student.name}</div>
-                  <div className="md:col-span-5 flex justify-center gap-2 lg:gap-4">
-                    <button
-                      onClick={() => updateStatus(student.id, 'present')}
-                      className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all border ${attendance[student.id] === 'present' ? 'bg-brand-900 text-brand-50 border-brand-900 shadow-md shadow-brand-900/20' : 'bg-white text-brand-900/30 border-brand-200'}`}
-                    >
-                      <CheckCircle2 size={16} /> <span className="hidden sm:inline">Present</span>
-                    </button>
-                    <button
-                      onClick={() => updateStatus(student.id, 'late')}
-                      className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all border ${attendance[student.id] === 'late' ? 'bg-brand-500 text-brand-900 border-brand-500 shadow-md shadow-brand-500/20' : 'bg-white text-brand-900/30 border-brand-200'}`}
-                    >
-                      <Clock size={16} /> <span className="hidden sm:inline">Late</span>
-                    </button>
-                    <button
-                      onClick={() => updateStatus(student.id, 'absent')}
-                      className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all border ${attendance[student.id] === 'absent' ? 'bg-red-700 text-white border-red-700 shadow-md shadow-red-700/20' : 'bg-white text-brand-900/30 border-brand-200'}`}
-                    >
-                      <XCircle size={16} /> <span className="hidden sm:inline">Absent</span>
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between p-6 glass-card bg-brand-900 border-none shadow-xl shadow-brand-900/20">
-            <div className="text-brand-50">
-              <p className="text-[10px] font-bold text-brand-50/40 uppercase tracking-widest mb-1">Session Summary</p>
-              <div className="flex gap-4">
-                <span className="text-sm font-bold text-brand-500">{Object.values(attendance).filter(v => v === 'present').length} Present</span>
-                <span className="text-sm font-bold text-brand-200">{Object.values(attendance).filter(v => v === 'late').length} Late</span>
-                <span className="text-sm font-bold text-red-300">{Object.values(attendance).filter(v => v === 'absent').length} Absent</span>
+                ))}
               </div>
             </div>
-            <button
-              onClick={handleDone}
-              disabled={saving}
-              className="px-8 py-3 bg-brand-50 text-brand-900 rounded-2xl font-bold flex items-center gap-2 hover:bg-brand-200 transition-all disabled:opacity-50"
-            >
-              {saving ? <div className="w-5 h-5 border-2 border-brand-900/30 border-t-brand-900 rounded-full animate-spin"></div> : <Save size={18} />}
-              Done
-            </button>
-          </div>
-        </div>
-      ) : (
-        <div className="glass-card p-20 text-center space-y-4">
-          <AlertCircle size={48} className="text-neutral-300 mx-auto" />
-          <p className="text-neutral-400 font-medium italic">No students found in this class.</p>
-        </div>
-      )}
+  
+            <div className="flex flex-col sm:flex-row items-center justify-between p-6 glass-card bg-brand-900 border-none shadow-xl shadow-brand-900/20 gap-6">
+              <div className="text-brand-50 text-center sm:text-left">
+                <p className="text-[10px] font-bold text-brand-50/40 uppercase tracking-widest mb-1">Session Summary</p>
+                <div className="flex gap-4">
+                  <span className="text-sm font-bold text-brand-500">{Object.values(attendance).filter(v => v === 'present').length} Present</span>
+                  <span className="text-sm font-bold text-brand-200">{Object.values(attendance).filter(v => v === 'late').length} Late</span>
+                  <span className="text-sm font-bold text-red-300">{Object.values(attendance).filter(v => v === 'absent').length} Absent</span>
+                </div>
+              </div>
+              <button
+                onClick={handleDone}
+                disabled={saving}
+                className="w-full sm:w-auto px-8 py-3.5 bg-brand-50 text-brand-900 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-brand-200 transition-all disabled:opacity-50"
+              >
+                {saving ? <div className="w-5 h-5 border-2 border-brand-900/30 border-t-brand-900 rounded-full animate-spin"></div> : <Save size={18} />}
+                {saving ? `Saving...` : `Submit Attendance`}
+              </button>
+            </div>
+          </motion.div>
+        ) : (
+          <motion.div 
+            key="empty"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="glass-card p-20 text-center space-y-4"
+          >
+            <AlertCircle size={48} className="text-neutral-300 mx-auto" />
+            <p className="text-neutral-400 font-medium italic">No students found in this class.</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

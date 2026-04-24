@@ -17,7 +17,7 @@ import {
   Filler
 } from 'chart.js';
 import { School, Users, GraduationCap, Calendar, BarChart3, Clock, Plus, X, ChevronLeft, ChevronRight } from 'lucide-react';
-import { startOfMonth, format, subDays, eachDayOfInterval, startOfWeek } from 'date-fns';
+import { startOfMonth, endOfMonth, format, subDays, eachDayOfInterval, startOfWeek } from 'date-fns';
 
 ChartJS.register(
   CategoryScale,
@@ -207,8 +207,8 @@ export default function AdminDashboard() {
       percentages = months.map(m => monthGroups[m].total > 0 ? (monthGroups[m].attended / monthGroups[m].total) * 100 : 0);
     } else {
       // Weekly or Monthly - Show ALL dates in range relative to pivotDate
-      const end = pivotDate;
-      const start = timeRange === 'weekly' ? subDays(end, 6) : startOfMonth(end);
+      const end = timeRange === 'monthly' ? endOfMonth(pivotDate) : pivotDate;
+      const start = timeRange === 'weekly' ? subDays(end, 6) : startOfMonth(pivotDate);
       const interval = eachDayOfInterval({ start, end });
 
       labels = interval.map(date => format(date, timeRange === 'weekly' ? 'EEE (dd/MM)' : 'dd'));
