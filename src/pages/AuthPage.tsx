@@ -1,9 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc, collection, query, where, getDocs, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 import { School, UserRole } from '../types';
-import { School as SchoolIcon, User, Lock, Mail, Phone, Hash, ArrowRight } from 'lucide-react';
+import { School as SchoolIcon, User, Lock, Mail, Phone, Hash, ArrowRight, Download } from 'lucide-react';
+
+interface BeforeInstallPromptEvent extends Event {
+  readonly platforms: string[];
+  readonly userChoice: Promise<{
+    outcome: 'accepted' | 'dismissed';
+    platform: string;
+  }>;
+  prompt(): Promise<void>;
+}
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
@@ -18,6 +27,32 @@ export default function AuthPage() {
   const [phone, setPhone] = useState('');
   const [schoolName, setSchoolName] = useState('');
   const [schoolPassword, setSchoolPassword] = useState(''); // Shared school secret
+
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e as BeforeInstallPromptEvent);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
+    
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    
+    if (outcome === 'accepted') {
+      setDeferredPrompt(null);
+    }
+  };
 
   const generateSchoolCode = () => {
     return 'SCH-' + Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -105,8 +140,8 @@ export default function AuthPage() {
     <div className="min-h-screen bg-brand-50 flex items-center justify-center p-4 md:p-8">
       <div className="w-full max-w-md">
         <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-20 h-20 mb-4 shadow-xl shadow-brand-900/10 rounded-2xl overflow-hidden">
-            <img src="/logo.png" alt="EduAttend Logo" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-brand-900 rounded-2xl mb-4 text-brand-50 shadow-xl shadow-brand-900/10">
+            <SchoolIcon size={32} />
           </div>
           <h1 className="text-4xl font-bold tracking-tight mb-2">EduAttend</h1>
           <p className="text-brand-900/60 font-medium font-serif italic text-lg line-height-tight">Smart Attendance for Modern Schools</p>
@@ -150,7 +185,7 @@ export default function AuthPage() {
 
             {!isLogin && (
               <div className="relative">
-                <User className="absolute left-3.5 top-3.5 text-brand-500" size={18} />
+                <User className="absolute left-0 top-3.5 text-brand-500" size={18} />
                 <input
                   type="text"
                   placeholder="Full Name"
@@ -163,7 +198,7 @@ export default function AuthPage() {
             )}
 
             <div className="relative">
-              <Mail className="absolute left-3.5 top-3.5 text-brand-500" size={18} />
+              <Mail className="absolute left-0 top-3.5 text-brand-500" size={18} />
               <input
                 type="email"
                 placeholder="Email Address"
@@ -176,7 +211,7 @@ export default function AuthPage() {
 
             {!isLogin && (
               <div className="relative">
-                <Phone className="absolute left-3.5 top-3.5 text-brand-500" size={18} />
+                <Phone className="absolute left-0 top-3.5 text-brand-500" size={18} />
                 <input
                   type="tel"
                   placeholder="Phone Number"
@@ -190,7 +225,7 @@ export default function AuthPage() {
 
             {!isLogin && role === 'admin' && (
               <div className="relative">
-                <SchoolIcon className="absolute left-3.5 top-3.5 text-brand-500" size={18} />
+                <SchoolIcon className="absolute left-0 top-3.5 text-brand-500" size={18} />
                 <input
                   type="text"
                   placeholder="School Name"
@@ -204,7 +239,7 @@ export default function AuthPage() {
 
             {!isLogin && role === 'teacher' && (
               <div className="relative">
-                <Hash className="absolute left-3.5 top-3.5 text-brand-500" size={18} />
+                <Hash className="absolute left-0 top-3.5 text-brand-500" size={18} />
                 <input
                   type="text"
                   placeholder="Invite Code (e.g. SCH-XXXXXX)"
@@ -217,7 +252,7 @@ export default function AuthPage() {
             )}
 
             <div className="relative">
-              <Lock className="absolute left-3.5 top-3.5 text-brand-500" size={18} />
+              <Lock className="absolute left-0 top-3.5 text-brand-500" size={18} />
               <input
                 type="password"
                 placeholder="Login Password"
@@ -245,6 +280,18 @@ export default function AuthPage() {
             Don't have an account?{' '}
             <button onClick={() => setIsLogin(false)} className="text-brand-900 font-bold hover:underline">Sign up as Teacher or Admin</button>
           </p>
+        )}
+
+        {deferredPrompt && (
+          <div className="mt-8 flex justify-center">
+            <button 
+              onClick={handleInstallClick} 
+              className="flex items-center gap-2 bg-brand-900 text-brand-50 px-5 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-brand-900/10 transition-all hover:-translate-y-0.5 hover:shadow-brand-900/20"
+            >
+              <Download size={18} />
+              Install EduAttend App
+            </button>
+          </div>
         )}
       </div>
     </div>
