@@ -315,9 +315,9 @@ export default function AuthPage() {
                 <SchoolIcon className="absolute left-0 top-3.5 text-brand-500" size={18} />
                 <input
                   type="text"
-                  placeholder="School Name"
+                  placeholder="School Name * (Required)"
                   required
-                  className="input-field pl-5"
+                  className="input-field pl-5 font-bold"
                   value={schoolName}
                   onChange={(e) => setSchoolName(e.target.value)}
                 />
@@ -329,9 +329,9 @@ export default function AuthPage() {
                 <Hash className="absolute left-0 top-3.5 text-brand-500" size={18} />
                 <input
                   type="text"
-                  placeholder="Invite Code (e.g. SCH-XXXXXX)"
+                  placeholder="Invite Code * (e.g. SCH-XXXXXX)"
                   required
-                  className="input-field pl-5"
+                  className="input-field pl-5 font-bold"
                   value={schoolPassword}
                   onChange={(e) => setSchoolPassword(e.target.value)}
                 />
