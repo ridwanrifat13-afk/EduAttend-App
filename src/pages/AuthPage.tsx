@@ -105,8 +105,8 @@ export default function AuthPage() {
     <div className="min-h-screen bg-brand-50 flex items-center justify-center p-4 md:p-8">
       <div className="w-full max-w-md">
         <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-brand-900 rounded-2xl mb-4 text-brand-50 shadow-xl shadow-brand-900/10">
-            <SchoolIcon size={32} />
+          <div className="inline-flex items-center justify-center w-20 h-20 mb-4 shadow-xl shadow-brand-900/10 rounded-2xl overflow-hidden">
+            <img src="/IMG_20260424_030116.png" alt="EduAttend Logo" className="w-full h-full object-cover" />
           </div>
           <h1 className="text-4xl font-bold tracking-tight mb-2">EduAttend</h1>
           <p className="text-brand-900/60 font-medium font-serif italic text-lg line-height-tight">Smart Attendance for Modern Schools</p>
