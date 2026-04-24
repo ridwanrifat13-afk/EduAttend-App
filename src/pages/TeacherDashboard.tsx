@@ -266,20 +266,20 @@ export default function TeacherDashboard() {
           <h1 className="text-3xl font-bold tracking-tight mb-1">Teacher Dashboard</h1>
           <p className="text-neutral-500 font-medium">Monitoring {classes.find(c => c.id === selectedClass)?.className} - Section {classes.find(c => c.id === selectedClass)?.section}</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
           <select 
-            className="input-field py-2 text-sm max-w-[200px]"
+            className="input-field py-2 text-sm w-full sm:w-fit sm:max-w-[250px]"
             value={selectedClass || ''}
             onChange={(e) => setSelectedClass(e.target.value)}
           >
             {classes.map(c => <option key={c.id} value={c.id}>Class {c.className} - {c.section}</option>)}
           </select>
-          <div className="bg-neutral-100 p-1 rounded-xl flex gap-1">
+          <div className="bg-neutral-100 p-1 rounded-xl flex items-center justify-between sm:justify-start gap-1 w-full sm:w-auto">
             {(['weekly', 'monthly', 'yearly'] as const).map(range => (
               <button
                 key={range}
                 onClick={() => setTimeRange(range)}
-                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${timeRange === range ? 'bg-white shadow-sm text-neutral-900' : 'text-neutral-400'}`}
+                className={`flex-1 sm:flex-none px-3 py-1.5 text-xs font-bold rounded-lg transition-all text-center ${timeRange === range ? 'bg-white shadow-sm text-neutral-900' : 'text-neutral-400'}`}
               >
                 {range.charAt(0).toUpperCase() + range.slice(1)}
               </button>
