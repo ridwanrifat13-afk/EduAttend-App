@@ -60,7 +60,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
       <header className="md:hidden flex items-center justify-between p-4 bg-white/90 backdrop-blur-sm border-b border-brand-200 sticky top-0 z-50">
         <Link to={dashboardPath} className="flex items-center gap-2 active:opacity-70 transition-opacity">
           <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg shadow-brand-900/20 overflow-hidden">
-            <img src="/IMG_20260424_030116.png" alt="EduAttend Logo" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+            <img src="/logo.png" alt="EduAttend Logo" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
           </div>
           <span className="font-bold text-xl tracking-tight font-serif text-brand-900">EduAttend</span>
         </Link>
@@ -77,7 +77,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
         <div className="h-full flex flex-col p-6">
           <Link to={dashboardPath} onClick={() => setIsMenuOpen(false)} className="hidden md:flex items-center gap-3 mb-10 active:opacity-70 transition-opacity">
             <div className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-xl shadow-brand-900/20 overflow-hidden">
-              <img src="/IMG_20260424_030116.png" alt="EduAttend Logo" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+              <img src="/logo.png" alt="EduAttend Logo" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
             </div>
             <div>
               <h1 className="font-bold text-2xl tracking-tight leading-tight text-brand-900">EduAttend</h1>

@@ -12,7 +12,7 @@ export default defineConfig(({mode}) => {
       tailwindcss(),
       VitePWA({
         registerType: 'autoUpdate',
-        includeAssets: ['IMG_20260424_030116.png'],
+        includeAssets: ['logo.png'],
         manifest: {
           name: 'EduAttend',
           short_name: 'EduAttend',
@@ -22,7 +22,7 @@ export default defineConfig(({mode}) => {
           display: 'standalone',
           icons: [
             {
-              src: 'IMG_20260424_030116.png',
+              src: 'logo.png',
               sizes: '192x192 512x512',
               type: 'image/png',
               purpose: 'any maskable'
