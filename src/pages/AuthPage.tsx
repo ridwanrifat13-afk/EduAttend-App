@@ -29,8 +29,14 @@ export default function AuthPage() {
   const [schoolPassword, setSchoolPassword] = useState(''); // Shared school secret
 
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [showInstallHelp, setShowInstallHelp] = useState(false);
+  const [isInstalled, setIsInstalled] = useState(false);
 
   useEffect(() => {
+    if (window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true) {
+      setIsInstalled(true);
+    }
+    
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
@@ -44,13 +50,15 @@ export default function AuthPage() {
   }, []);
 
   const handleInstallClick = async () => {
-    if (!deferredPrompt) return;
-    
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    
-    if (outcome === 'accepted') {
-      setDeferredPrompt(null);
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        setDeferredPrompt(null);
+      }
+    } else {
+      setShowInstallHelp(true);
+      setTimeout(() => setShowInstallHelp(false), 8000);
     }
   };
 
@@ -282,8 +290,8 @@ export default function AuthPage() {
           </p>
         )}
 
-        {deferredPrompt && (
-          <div className="mt-8 flex justify-center">
+        {!isInstalled && (
+          <div className="mt-8 flex flex-col items-center justify-center gap-3">
             <button 
               onClick={handleInstallClick} 
               className="flex items-center gap-2 bg-brand-900 text-brand-50 px-5 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-brand-900/10 transition-all hover:-translate-y-0.5 hover:shadow-brand-900/20"
@@ -291,6 +299,15 @@ export default function AuthPage() {
               <Download size={18} />
               Install EduAttend App
             </button>
+            {showInstallHelp && (
+              <div className="bg-white/80 backdrop-blur border border-brand-200 p-3 rounded-lg text-xs text-brand-900 text-center max-w-[280px] shadow-sm animate-in fade-in slide-in-from-bottom-2">
+                <p>To install this app:</p>
+                <ul className="mt-1 space-y-1 text-left list-disc list-inside">
+                  <li><strong>iOS:</strong> Tap <span className="inline-block px-1 border border-brand-200 rounded text-[10px] bg-brand-50">Share</span> then <strong>Add to Home Screen</strong></li>
+                  <li><strong>Android/Desktop:</strong> Look for the install icon in your address bar or browser menu.</li>
+                </ul>
+              </div>
+            )}
           </div>
         )}
       </div>
