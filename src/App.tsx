@@ -201,7 +201,17 @@ export default function App() {
     <AuthContext.Provider value={{ user, loading }}>
       <BrowserRouter>
         <Routes>
-          <Route path="/auth" element={!user ? <AuthPage /> : <Navigate to={user.role === 'admin' ? '/admin-dashboard' : '/teacher-dashboard'} />} />
+          <Route path="/auth" element={
+            loading ? (
+              <div className="h-screen w-full flex items-center justify-center bg-brand-50">
+                <div className="animate-spin w-8 h-8 border-4 border-brand-900 border-t-transparent rounded-full"></div>
+              </div>
+            ) : !user ? (
+              <AuthPage />
+            ) : (
+              <Navigate to={user.role === 'admin' ? '/admin-dashboard' : '/teacher-dashboard'} />
+            )
+          } />
           
           <Route path="/teacher-dashboard" element={
             <ProtectedRoute roles={['teacher']}><TeacherDashboard /></ProtectedRoute>
@@ -223,7 +233,17 @@ export default function App() {
             <ProtectedRoute><HistoryPage /></ProtectedRoute>
           } />
           
-          <Route path="/" element={<LandingPage />} />
+          <Route path="/" element={
+            loading ? (
+              <div className="h-screen w-full flex items-center justify-center bg-brand-50">
+                <div className="animate-spin w-8 h-8 border-4 border-brand-900 border-t-transparent rounded-full"></div>
+              </div>
+            ) : user ? (
+              <Navigate to={user.role === 'admin' ? '/admin-dashboard' : '/teacher-dashboard'} />
+            ) : (
+              <LandingPage />
+            )
+          } />
         </Routes>
       </BrowserRouter>
     </AuthContext.Provider>
