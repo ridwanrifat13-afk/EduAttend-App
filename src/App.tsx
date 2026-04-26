@@ -11,6 +11,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import AttendancePage from './pages/AttendancePage';
 import StudentPage from './pages/StudentPage';
 import HistoryPage from './pages/HistoryPage';
+import LandingPage from './pages/LandingPage';
 
 // Context
 interface AuthContextType {
@@ -222,7 +223,7 @@ export default function App() {
             <ProtectedRoute><HistoryPage /></ProtectedRoute>
           } />
           
-          <Route path="/" element={<Navigate to="/auth" />} />
+          <Route path="/" element={<LandingPage />} />
         </Routes>
       </BrowserRouter>
     </AuthContext.Provider>
