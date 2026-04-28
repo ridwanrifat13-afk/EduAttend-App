@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, where, getDocs, addDoc, serverTimestamp, doc } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../App';
 import { ClassSection, Student, AttendanceRecord, AttendanceSession } from '../types';
+import { initializePaddle, Paddle } from '@paddle/paddle-js';
 import { Line, Bar } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -47,6 +48,55 @@ export default function AdminDashboard() {
   const [newClassName, setNewClassName] = useState('');
   const [newSection, setNewSection] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [paddle, setPaddle] = useState<Paddle>();
+
+  useEffect(() => {
+    // Initialize Paddle Billing
+    const paddleClientToken = import.meta.env.VITE_PADDLE_CLIENT_TOKEN;
+    const paddleEnv = import.meta.env.VITE_PADDLE_ENVIRONMENT === 'sandbox' ? 'sandbox' : 'production';
+    
+    if (paddleClientToken) {
+      initializePaddle({
+        environment: paddleEnv,
+        token: paddleClientToken,
+        eventCallback: async function(data) {
+          if (data.name === "checkout.completed" && user?.schoolId) {
+             console.log("Checkout complete. Waiting for webhook...");
+             alert("Payment successful! Upgrading to Pro... Please wait.");
+             setTimeout(() => {
+                window.location.reload();
+             }, 3000);
+          }
+        }
+      }).then((paddleInstance) => {
+        if (paddleInstance) {
+          setPaddle(paddleInstance);
+        }
+      });
+    }
+  }, [user?.schoolId]);
+
+  const handleUpgrade = () => {
+    const priceId = import.meta.env.VITE_PADDLE_PRICE_ID;
+    
+    if (paddle && priceId) {
+      // Real Paddle Checkout
+      paddle.Checkout.open({
+        items: [{ priceId: priceId, quantity: 1 }],
+        customData: {
+          schoolId: user?.schoolId
+        }
+      });
+    } else {
+      // Simulation
+      alert('Simulated Checkout in Dashboard! Set environment variables for real payment.');
+      if (user?.schoolId) {
+         updateDoc(doc(db, 'schools', user.schoolId), { plan: 'pro' }).then(() => {
+           window.location.reload();
+         });
+      }
+    }
+  };
 
   const handlePeriodChange = (direction: 'prev' | 'next') => {
     const newDate = new Date(pivotDate);
@@ -259,7 +309,19 @@ export default function AdminDashboard() {
           <div className="flex items-center gap-2 text-neutral-500 mb-2 font-bold uppercase tracking-widest text-xs">
             <School size={14} /> Admin Dashboard
           </div>
-          <h1 className="text-4xl font-bold tracking-tight">{schoolData?.name || 'School Overview'}</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-4xl font-bold tracking-tight">{schoolData?.name || 'School Overview'}</h1>
+            {schoolData?.plan === 'pro' ? (
+              <span className="px-2 py-1 bg-brand-900 text-brand-50 text-[10px] font-bold uppercase tracking-widest rounded shadow-sm">Pro Plan</span>
+            ) : (
+              <button 
+                onClick={handleUpgrade}
+                className="px-3 py-1 bg-gradient-to-r from-amber-400 to-amber-500 text-white text-xs font-bold uppercase tracking-widest rounded shadow-sm hover:shadow-md transition-all flex items-center gap-1"
+              >
+                Upgrade to Pro
+              </button>
+            )}
+          </div>
           <p className="text-neutral-500 font-medium mt-1">School Code: <span className="text-neutral-900 font-bold">{schoolData?.code}</span></p>
         </div>
         <div className="flex bg-white px-4 py-2 rounded-2xl shadow-sm border border-neutral-200 divide-x divide-neutral-100">
