@@ -132,17 +132,6 @@ export default function StudentPage() {
     setFormError('');
 
     try {
-      // Check limits
-      const schoolRef = doc(db, 'schools', user.schoolId);
-      const schoolSnap = await getDoc(schoolRef);
-      if (schoolSnap.exists() && schoolSnap.data().plan === 'free') {
-        const qCount = query(collection(db, 'students'), where('schoolId', '==', user.schoolId));
-        const studentsSnap = await getDocs(qCount);
-        if (studentsSnap.size >= 100) {
-          throw new Error('This school has reached the maximum limit of 100 students for the Free plan. Contact your Admin to upgrade to Pro.');
-        }
-      }
-
       await addDoc(collection(db, 'students'), {
         schoolId: user.schoolId,
         classId: selectedClass,

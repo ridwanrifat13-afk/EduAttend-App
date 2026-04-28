@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { School, CheckCircle2, Zap, WifiOff, LayoutDashboard, Download, ArrowRight, ShieldCheck, ChevronRight, X, Clock, Activity, Timer, AlertTriangle, TrendingUp } from 'lucide-react';
-import { initializePaddle, Paddle } from '@paddle/paddle-js';
 
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: string[];
@@ -15,34 +14,10 @@ interface BeforeInstallPromptEvent extends Event {
 export default function LandingPage() {
   const navigate = useNavigate();
   const [isProcessing, setIsProcessing] = useState(false);
-  const [paddle, setPaddle] = useState<Paddle>();
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showIosGuide, setShowIosGuide] = useState(false);
 
   useEffect(() => {
-    // Initialize Paddle Billing
-    const paddleClientToken = import.meta.env.VITE_PADDLE_CLIENT_TOKEN;
-    const paddleEnv = import.meta.env.VITE_PADDLE_ENVIRONMENT === 'sandbox' ? 'sandbox' : 'production';
-    
-    if (paddleClientToken) {
-      initializePaddle({
-        environment: paddleEnv,
-        token: paddleClientToken,
-        eventCallback: function(data) {
-          if (data.name === "checkout.error") {
-            console.error("Paddle Checkout Error:", data);
-            alert("Paddle Checkout Error (Check console for details). Make sure your Domain is approved in Paddle Dashboard, your Price ID is correct, and your Token is valid for " + paddleEnv + ".");
-          } else if (data.name === "checkout.completed") {
-            navigate('/auth?plan=pro');
-          }
-        }
-      }).then((paddleInstance) => {
-        if (paddleInstance) {
-          setPaddle(paddleInstance);
-        }
-      });
-    }
-    
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
@@ -68,22 +43,13 @@ export default function LandingPage() {
   };
 
   const handleProCheckout = () => {
-    const priceId = import.meta.env.VITE_PADDLE_PRICE_ID;
-    
-    if (paddle && priceId) {
-      // Real Paddle Checkout
-      paddle.Checkout.open({
-        items: [{ priceId: priceId, quantity: 1 }]
-      });
-    } else {
-      // Demo / Simulation Fallback
-      setIsProcessing(true);
-      setTimeout(() => {
-        alert("Simulated Checkout! Configure VITE_PADDLE_CLIENT_TOKEN and VITE_PADDLE_PRICE_ID to enable real payments.");
-        setIsProcessing(false);
-        navigate('/auth?plan=pro');
-      }, 1500);
-    }
+    setIsProcessing(true);
+    // Simulate Stripe Redirect
+    setTimeout(() => {
+      alert("Simulated Stripe Checkout! Redirecting back to Auth...");
+      setIsProcessing(false);
+      navigate('/auth?plan=pro');
+    }, 1500);
   };
 
   return (

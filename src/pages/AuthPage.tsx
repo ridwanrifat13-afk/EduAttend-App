@@ -87,16 +87,7 @@ export default function AuthPage() {
           if (querySnapshot.empty) {
             throw new Error('Invalid School Code. Please check with your Admin.');
           }
-          const schoolDoc = querySnapshot.docs[0];
-          targetSchoolId = schoolDoc.id;
-          const schoolData = schoolDoc.data();
-          if (schoolData.plan === 'free') {
-            const teachersQ = query(collection(db, 'users'), where('schoolId', '==', targetSchoolId), where('role', '==', 'teacher'));
-            const teachersSnap = await getDocs(teachersQ);
-            if (teachersSnap.size >= 5) {
-              throw new Error('This school has reached the maximum limit of 5 teachers for the Free plan. The admin must upgrade to Pro.');
-            }
-          }
+          targetSchoolId = querySnapshot.docs[0].id;
         }
 
         // 2. Create User in Firebase Auth
@@ -123,15 +114,11 @@ export default function AuthPage() {
           generatedCode = newCode;
           userData.schoolId = targetSchoolId; // Update userData with the new schoolId
           
-          const urlParams = new URLSearchParams(window.location.search);
-          const planParam = urlParams.get('plan') === 'pro' ? 'pro' : 'free';
-
           await setDoc(schoolRef, {
             id: targetSchoolId,
             name: schoolName,
             code: generatedCode,
             adminId: userId,
-            plan: planParam,
             createdAt: serverTimestamp(),
             status: 'active'
           });
@@ -185,16 +172,7 @@ export default function AuthPage() {
             if (querySnapshot.empty) {
               throw new Error('Invalid School Code.');
             }
-            const schoolDoc = querySnapshot.docs[0];
-            targetSchoolId = schoolDoc.id;
-            const schoolData = schoolDoc.data();
-            if (schoolData.plan === 'free') {
-              const teachersQ = query(collection(db, 'users'), where('schoolId', '==', targetSchoolId), where('role', '==', 'teacher'));
-              const teachersSnap = await getDocs(teachersQ);
-              if (teachersSnap.size >= 5) {
-                throw new Error('This school has reached the maximum limit of 5 teachers for the Free plan. The admin must upgrade to Pro.');
-              }
-            }
+            targetSchoolId = querySnapshot.docs[0].id;
           }
 
           const userData: any = {
@@ -219,15 +197,11 @@ export default function AuthPage() {
             generatedCode = newCode;
             userData.schoolId = targetSchoolId;
             
-            const urlParams = new URLSearchParams(window.location.search);
-            const planParam = urlParams.get('plan') === 'pro' ? 'pro' : 'free';
-
             await setDoc(schoolRef, {
               id: targetSchoolId,
               name: schoolName,
               code: generatedCode,
               adminId: userId,
-              plan: planParam,
               createdAt: serverTimestamp(),
               status: 'active'
             });
@@ -338,41 +312,29 @@ export default function AuthPage() {
 
             {!isLogin && role === 'admin' && (
               <div className="relative">
-                <div className="flex justify-between items-center mb-1">
-                  <label className="text-xs font-bold text-brand-900 uppercase tracking-wider">School Name</label>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded text-white bg-red-500 uppercase tracking-wide">Mandatory</span>
-                </div>
-                <div className="relative">
-                  <SchoolIcon className="absolute left-0 top-3.5 text-brand-500" size={18} />
-                  <input
-                    type="text"
-                    placeholder="Enter your school name"
-                    required
-                    className="input-field pl-5 font-bold border-red-200 focus:border-red-500"
-                    value={schoolName}
-                    onChange={(e) => setSchoolName(e.target.value)}
-                  />
-                </div>
+                <SchoolIcon className="absolute left-0 top-3.5 text-brand-500" size={18} />
+                <input
+                  type="text"
+                  placeholder="School Name * (Required)"
+                  required
+                  className="input-field pl-5 font-bold"
+                  value={schoolName}
+                  onChange={(e) => setSchoolName(e.target.value)}
+                />
               </div>
             )}
 
             {!isLogin && role === 'teacher' && (
               <div className="relative">
-                <div className="flex justify-between items-center mb-1">
-                  <label className="text-xs font-bold text-brand-900 uppercase tracking-wider">Invite Code</label>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded text-white bg-red-500 uppercase tracking-wide">Mandatory</span>
-                </div>
-                <div className="relative">
-                  <Hash className="absolute left-0 top-3.5 text-brand-500" size={18} />
-                  <input
-                    type="text"
-                    placeholder="e.g. SCH-XXXXXX"
-                    required
-                    className="input-field pl-5 font-bold border-red-200 focus:border-red-500"
-                    value={schoolPassword}
-                    onChange={(e) => setSchoolPassword(e.target.value)}
-                  />
-                </div>
+                <Hash className="absolute left-0 top-3.5 text-brand-500" size={18} />
+                <input
+                  type="text"
+                  placeholder="Invite Code * (e.g. SCH-XXXXXX)"
+                  required
+                  className="input-field pl-5 font-bold"
+                  value={schoolPassword}
+                  onChange={(e) => setSchoolPassword(e.target.value)}
+                />
               </div>
             )}
 
