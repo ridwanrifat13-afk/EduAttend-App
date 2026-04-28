@@ -1,8 +1,0 @@
-{
-  "rewrites": [
-    {
-      "source": "/((?!assets|favicon.ico|manifest.json|icons).*)",
-      "destination": "/index.html"
-    }
-  ]
-}
