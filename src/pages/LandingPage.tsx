@@ -29,7 +29,10 @@ export default function LandingPage() {
         environment: paddleEnv,
         token: paddleClientToken,
         eventCallback: function(data) {
-          if (data.name === "checkout.completed") {
+          if (data.name === "checkout.error") {
+            console.error("Paddle Checkout Error:", data);
+            alert("Paddle Checkout Error (Check console for details). Make sure your Domain is approved in Paddle Dashboard, your Price ID is correct, and your Token is valid for " + paddleEnv + ".");
+          } else if (data.name === "checkout.completed") {
             navigate('/auth?plan=pro');
           }
         }
