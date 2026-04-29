@@ -306,21 +306,21 @@ export default function AttendancePage() {
                     <div className="md:col-span-5 flex justify-center gap-2 lg:gap-4">
                       <button
                         onClick={() => updateStatus(student.id, 'present')}
-                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all border ${attendance[student.id] === 'present' ? 'bg-brand-900 text-brand-50 border-brand-900 shadow-md shadow-brand-900/20' : 'bg-white text-brand-900/30 border-brand-200'}`}
+                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all border ${attendance[student.id] === 'present' ? 'bg-green-600 text-white border-green-600 shadow-md shadow-green-600/30 scale-[1.02]' : 'bg-white text-green-600/80 border-green-200/60 hover:bg-green-50'}`}
                       >
-                        <CheckCircle2 size={16} /> <span className="hidden sm:inline">Present</span>
+                        <CheckCircle2 size={18} strokeWidth={2.5} /> <span className="hidden sm:inline">Present</span>
                       </button>
                       <button
                         onClick={() => updateStatus(student.id, 'late')}
-                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all border ${attendance[student.id] === 'late' ? 'bg-brand-500 text-brand-900 border-brand-500 shadow-md shadow-brand-500/20' : 'bg-white text-brand-900/30 border-brand-200'}`}
+                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all border ${attendance[student.id] === 'late' ? 'bg-amber-500 text-white border-amber-500 shadow-md shadow-amber-500/30 scale-[1.02]' : 'bg-white text-amber-600/80 border-amber-200/60 hover:bg-amber-50'}`}
                       >
-                        <Clock size={16} /> <span className="hidden sm:inline">Late</span>
+                        <Clock size={18} strokeWidth={2.5} /> <span className="hidden sm:inline">Late</span>
                       </button>
                       <button
                         onClick={() => updateStatus(student.id, 'absent')}
-                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all border ${attendance[student.id] === 'absent' ? 'bg-red-700 text-white border-red-700 shadow-md shadow-red-700/20' : 'bg-white text-brand-900/30 border-brand-200'}`}
+                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all border ${attendance[student.id] === 'absent' ? 'bg-red-600 text-white border-red-600 shadow-md shadow-red-600/30 scale-[1.02]' : 'bg-white text-red-600/80 border-red-200/60 hover:bg-red-50'}`}
                       >
-                        <XCircle size={16} /> <span className="hidden sm:inline">Absent</span>
+                        <XCircle size={18} strokeWidth={2.5} /> <span className="hidden sm:inline">Absent</span>
                       </button>
                     </div>
                   </div>
