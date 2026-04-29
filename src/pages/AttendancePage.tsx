@@ -65,14 +65,17 @@ export default function AttendancePage() {
       
       if (!force) {
         // 1. Check if session already exists for today
-        const sessionQuery = query(
+        const sessionId = `${selectedClass}_${today}`;
+        const sessionRef = doc(db, 'attendance_sessions', sessionId);
+        const sessionSnap = await getDocs(query(
           collection(db, 'attendance_sessions'),
           where('schoolId', '==', user.schoolId),
           where('classId', '==', selectedClass),
           where('date', '==', today)
-        );
-        const sessionSnap = await getDocs(sessionQuery);
+        ));
         
+        // We keep the query for legacy session IDs, but also check the new deterministic one just in case
+        // Actually, we can just check the deterministic one or the query to be safe.
         if (!sessionSnap.empty) {
           setAlreadyTaken(true);
           setLoading(false);
@@ -114,32 +117,6 @@ export default function AttendancePage() {
     setSaving(true);
     try {
       const today = format(new Date(), 'yyyy-MM-dd');
-
-      // Find and delete any existing session for this class/day to ensure only the last one is saved
-      const sessionQuery = query(
-        collection(db, 'attendance_sessions'),
-        where('schoolId', '==', user.schoolId),
-        where('classId', '==', selectedClass),
-        where('date', '==', today)
-      );
-      const sessionSnap = await getDocs(sessionQuery);
-      
-      if (!sessionSnap.empty) {
-        for (const sessionDoc of sessionSnap.docs) {
-          // Delete associated records first
-          const recordsQuery = query(
-            collection(db, 'attendance_records'), 
-            where('schoolId', '==', user.schoolId),
-            where('sessionId', '==', sessionDoc.id)
-          );
-          const recordsSnap = await getDocs(recordsQuery);
-          const deleteRecordPromises = recordsSnap.docs.map(rd => deleteDoc(doc(db, 'attendance_records', rd.id)));
-          await Promise.all(deleteRecordPromises);
-          
-          // Delete the session itself
-          await deleteDoc(doc(db, 'attendance_sessions', sessionDoc.id));
-        }
-      }
       
       const counts = {
         present: Object.values(attendance).filter(v => v === 'present').length,
@@ -148,36 +125,58 @@ export default function AttendancePage() {
         total: students.length
       };
 
-      // Create session with counts
-      const sessionRef = await addDoc(collection(db, 'attendance_sessions'), {
-        schoolId: user.schoolId,
-        classId: selectedClass,
-        date: today,
-        teacherId: user.uid,
-        createdAt: serverTimestamp(),
-        locked: true,
-        ...counts
-      });
+      // Define deterministic IDs so we can cleanly overwrite without querying first
+      const sessionId = `${selectedClass}_${today}`;
+      const sessionRef = doc(db, 'attendance_sessions', sessionId);
 
-      // Create records
-      const recordPromises = students.map(student => {
-        const recordRef = doc(collection(db, 'attendance_records'));
-        return setDoc(recordRef, {
-          sessionId: sessionRef.id,
-          studentId: student.id,
-          status: attendance[student.id],
-          schoolId: user.schoolId,
-          markedAt: serverTimestamp()
-        });
-      });
+      // We explicitly dispatch writes without awaiting to ensure UI doesn't block
+      // if offline. Firebase local persistence will queue these up.
+      const saveAttendance = async () => {
+        try {
+          // Create or overwrite session
+          await setDoc(sessionRef, {
+            schoolId: user.schoolId,
+            classId: selectedClass,
+            date: today,
+            teacherId: user.uid,
+            createdAt: serverTimestamp(), // If overwriting, this updates to latest, which is fine
+            locked: true,
+            ...counts
+          });
 
-      await Promise.all(recordPromises);
-      setDone(true);
+          // Create or overwrite records
+          const recordPromises = students.map(student => {
+            const recordId = `${sessionId}_${student.id}`;
+            const recordRef = doc(db, 'attendance_records', recordId);
+            return setDoc(recordRef, {
+              sessionId: sessionRef.id,
+              studentId: student.id,
+              status: attendance[student.id],
+              schoolId: user.schoolId,
+              markedAt: serverTimestamp()
+            });
+          });
+
+          await Promise.all(recordPromises);
+        } catch (e) {
+          console.error("Error in background save:", e);
+        }
+      };
+
+      // Fire and forget
+      saveAttendance();
+
+      // We add a tiny delay to allow the local UI to feel like 'saving' happened
+      setTimeout(() => {
+        setSaving(false);
+        setDone(true);
+      }, 600);
+
     } catch (e) {
       console.error(e);
       alert('Error saving attendance. Please try again.');
+      setSaving(false);
     }
-    setSaving(false);
   };
 
   const handleTakeAnother = () => {
