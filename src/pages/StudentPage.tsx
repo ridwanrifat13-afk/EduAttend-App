@@ -290,11 +290,11 @@ export default function StudentPage() {
       {/* Filters */}
       <div className="glass-card p-4 flex flex-col md:flex-row items-center gap-4">
         <div className="flex-1 w-full relative">
-          <Search className="absolute left-4 top-3 text-brand-500" size={18} />
+          <Search className="absolute right-4 top-3 text-brand-500" size={18} />
           <input 
             type="text" 
             placeholder="Search student by name or ID..." 
-            className="input-field pl-11 py-2.5" 
+            className="input-field pr-11 py-2.5" 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />

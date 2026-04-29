@@ -171,22 +171,22 @@ export default function HistoryPage() {
       ) : (
         <div className="space-y-6">
           {/* Summary Banner */}
-          <div className="glass-card p-6 bg-brand-900 text-brand-50 flex flex-wrap gap-8 items-center justify-center md:justify-start shadow-xl shadow-brand-900/20">
+          <div className="rounded-3xl p-6 bg-brand-900 text-brand-50 flex flex-wrap gap-8 items-center justify-center md:justify-start shadow-xl shadow-brand-900/20">
              <div>
-               <p className="text-[10px] font-bold text-brand-50/40 uppercase tracking-widest mb-1">Total Strength</p>
+               <p className="text-[10px] font-bold text-brand-50/90 uppercase tracking-widest mb-1">Total Strength</p>
                <p className="text-2xl font-bold tracking-tight">{students.length}</p>
              </div>
              <div className="w-px h-10 bg-white/10 hidden sm:block"></div>
              <div>
-               <p className="text-[10px] font-bold text-brand-50/40 uppercase tracking-widest mb-1">Present</p>
+               <p className="text-[10px] font-bold text-brand-50/90 uppercase tracking-widest mb-1">Present</p>
                <p className="text-2xl font-bold tracking-tight text-brand-500">{records.filter(r => r.status === 'present').length}</p>
              </div>
              <div>
-               <p className="text-[10px] font-bold text-brand-50/40 uppercase tracking-widest mb-1">Absent</p>
+               <p className="text-[10px] font-bold text-brand-50/90 uppercase tracking-widest mb-1">Absent</p>
                <p className="text-2xl font-bold tracking-tight text-red-300">{records.filter(r => r.status === 'absent').length}</p>
              </div>
              <div>
-               <p className="text-[10px] font-bold text-brand-50/40 uppercase tracking-widest mb-1">Late</p>
+               <p className="text-[10px] font-bold text-brand-50/90 uppercase tracking-widest mb-1">Late</p>
                <p className="text-2xl font-bold tracking-tight text-brand-200">{records.filter(r => r.status === 'late').length}</p>
              </div>
              <div className="ml-auto hidden lg:block">
