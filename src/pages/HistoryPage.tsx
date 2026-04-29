@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
+import { collection, query, where, getDocs, onSnapshot, orderBy, limit } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../App';
 import { ClassSection, Student, AttendanceRecord, AttendanceSession } from '../types';
@@ -25,10 +25,87 @@ export default function HistoryPage() {
   }, [user]);
 
   useEffect(() => {
-    if (selectedClass && selectedDate) {
-      fetchHistory();
-    }
-  }, [selectedClass, selectedDate]);
+    let unsubscribeStudents: () => void;
+    let unsubscribeSession: () => void;
+    let unsubscribeRecords: () => void;
+
+    const setupListeners = async () => {
+      if (!selectedClass || !user?.schoolId) return;
+      setLoading(true);
+      
+      try {
+        // 1. Listen to students
+        const sQuery = query(
+          collection(db, 'students'), 
+          where('schoolId', '==', user.schoolId),
+          where('classId', '==', selectedClass)
+        );
+        unsubscribeStudents = onSnapshot(sQuery, (sSnap) => {
+          const studentsData = sSnap.docs.map(d => ({ id: d.id, ...d.data() } as Student));
+          setStudents(studentsData);
+        }, (error) => {
+          console.error("Students snapshot error:", error);
+        });
+
+        // 2. Listen to session for this date
+        const sesQuery = query(
+          collection(db, 'attendance_sessions'),
+          where('schoolId', '==', user.schoolId),
+          where('classId', '==', selectedClass),
+          where('date', '==', selectedDate)
+        );
+        
+        unsubscribeSession = onSnapshot(sesQuery, (sesSnap) => {
+          if (!sesSnap.empty) {
+            const sessions = sesSnap.docs.map(d => ({ id: d.id, ...d.data() } as AttendanceSession));
+            sessions.sort((a, b) => {
+              const aTime = a.createdAt?.toMillis?.() || 0;
+              const bTime = b.createdAt?.toMillis?.() || 0;
+              return bTime - aTime;
+            });
+            
+            const latestSession = sessions[0];
+            setSession(latestSession);
+
+            // 3. Listen to records for this session
+            if (unsubscribeRecords) unsubscribeRecords();
+            const recQuery = query(
+              collection(db, 'attendance_records'), 
+              where('schoolId', '==', user.schoolId),
+              where('sessionId', '==', latestSession.id)
+            );
+            unsubscribeRecords = onSnapshot(recQuery, (recSnap) => {
+              const recordsData = recSnap.docs.map(d => ({ id: d.id, ...d.data() } as AttendanceRecord));
+              setRecords(recordsData);
+              setLoading(false); // Stop loading once records are fetched
+            }, (error) => {
+              console.error("Records snapshot error:", error);
+            });
+          } else {
+            setSession(null);
+            setRecords([]);
+            if (unsubscribeRecords) unsubscribeRecords();
+            setLoading(false);
+          }
+        }, (error) => {
+          console.error("Session snapshot error:", error);
+          setLoading(false);
+        });
+        
+      } catch (e) {
+        console.error("Error setting up listeners:", e);
+        setLoading(false);
+      }
+    };
+
+    setupListeners();
+
+    return () => {
+      if (unsubscribeStudents) unsubscribeStudents();
+      if (unsubscribeSession) unsubscribeSession();
+      if (unsubscribeRecords) unsubscribeRecords();
+    };
+  }, [selectedClass, selectedDate, user?.schoolId]);
 
   const fetchClasses = async () => {
     if (!user?.schoolId) return;
@@ -47,61 +124,6 @@ export default function HistoryPage() {
     } else if (classesData.length > 0) {
       setSelectedClass(classesData[0].id);
     } else {
-      setLoading(false);
-    }
-  };
-
-  const fetchHistory = async () => {
-    if (!selectedClass || !user?.schoolId) return;
-    setLoading(true);
-    try {
-      // 1. Get students for class
-      const sQuery = query(
-        collection(db, 'students'), 
-        where('schoolId', '==', user.schoolId),
-        where('classId', '==', selectedClass)
-      );
-      const sSnap = await getDocs(sQuery);
-      const studentsData = sSnap.docs.map(d => ({ id: d.id, ...d.data() } as Student));
-      setStudents(studentsData);
-
-      // 2. Find sessions for that date - Sort by latest created to ensure we show the most recent one
-      const sesQuery = query(
-        collection(db, 'attendance_sessions'),
-        where('schoolId', '==', user.schoolId),
-        where('classId', '==', selectedClass),
-        where('date', '==', selectedDate)
-      );
-      const sesSnap = await getDocs(sesQuery);
-      
-      if (!sesSnap.empty) {
-        // Sort manually by createdAt if multiple exist (unlikely with our delete logic, but safe)
-        const sessions = sesSnap.docs.map(d => ({ id: d.id, ...d.data() } as AttendanceSession));
-        sessions.sort((a, b) => {
-          const aTime = a.createdAt?.toMillis?.() || 0;
-          const bTime = b.createdAt?.toMillis?.() || 0;
-          return bTime - aTime;
-        });
-        
-        const latestSession = sessions[0];
-        setSession(latestSession);
-
-        // 3. Get records
-        const recQuery = query(
-          collection(db, 'attendance_records'), 
-          where('schoolId', '==', user.schoolId),
-          where('sessionId', '==', latestSession.id)
-        );
-        const recSnap = await getDocs(recQuery);
-        const recordsData = recSnap.docs.map(d => ({ id: d.id, ...d.data() } as AttendanceRecord));
-        setRecords(recordsData);
-      } else {
-        setSession(null);
-        setRecords([]);
-      }
-    } catch (e) {
-      console.error("Error fetching history:", e);
-    } finally {
       setLoading(false);
     }
   };
