@@ -113,7 +113,7 @@ service cloud.firestore {
       allow read: if isVerified() && (resource.data.get('schoolId', '') == '' || resource.data.schoolId == getUserData(request.auth.uid).schoolId);
       allow create: if isVerified() && isSchoolTeacher(getIncomingData().schoolId) && isValidSession(getIncomingData());
       allow update: if isVerified() && (isSchoolAdmin(getExistingData().schoolId) || isSchoolTeacher(getExistingData().schoolId)) && isValidSession(getIncomingData()) &&
-                      getIncomingData().diff(getExistingData()).affectedKeys().hasOnly(['locked']);
+                      getIncomingData().diff(getExistingData()).affectedKeys().hasOnly(['locked', 'createdAt', 'present', 'absent', 'late', 'total']);
       allow delete: if isVerified() && (resource.data.get('schoolId', '') == '' || resource.data.schoolId == getUserData(request.auth.uid).schoolId);
     }
 

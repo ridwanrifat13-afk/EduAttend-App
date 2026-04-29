@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { collection, query, where, getDocs, addDoc, serverTimestamp, setDoc, doc, deleteDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, serverTimestamp, setDoc, doc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../App';
 import { ClassSection, Student, AttendanceStatus } from '../types';
@@ -129,12 +129,14 @@ export default function AttendancePage() {
       const sessionId = `${selectedClass}_${today}`;
       const sessionRef = doc(db, 'attendance_sessions', sessionId);
 
-      // We explicitly dispatch writes without awaiting to ensure UI doesn't block
-      // if offline. Firebase local persistence will queue these up.
+      // We use a batch so that all writes are instantly queued for local offline persistence
+      // without waiting for the network acknowledgement of individual writes.
       const saveAttendance = async () => {
         try {
+          const batch = writeBatch(db);
+          
           // Create or overwrite session
-          await setDoc(sessionRef, {
+          batch.set(sessionRef, {
             schoolId: user.schoolId,
             classId: selectedClass,
             date: today,
@@ -145,10 +147,10 @@ export default function AttendancePage() {
           });
 
           // Create or overwrite records
-          const recordPromises = students.map(student => {
+          students.forEach(student => {
             const recordId = `${sessionId}_${student.id}`;
             const recordRef = doc(db, 'attendance_records', recordId);
-            return setDoc(recordRef, {
+            batch.set(recordRef, {
               sessionId: sessionRef.id,
               studentId: student.id,
               status: attendance[student.id],
@@ -157,7 +159,7 @@ export default function AttendancePage() {
             });
           });
 
-          await Promise.all(recordPromises);
+          await batch.commit();
         } catch (e) {
           console.error("Error in background save:", e);
         }
