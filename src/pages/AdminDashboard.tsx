@@ -16,7 +16,7 @@ import {
   Legend,
   Filler
 } from 'chart.js';
-import { School, Users, GraduationCap, Calendar, BarChart3, Clock, Plus, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { School, Users, GraduationCap, Calendar, BarChart3, Clock, Plus, X, ChevronLeft, ChevronRight, User } from 'lucide-react';
 import { startOfMonth, endOfMonth, format, subDays, eachDayOfInterval, startOfWeek } from 'date-fns';
 
 ChartJS.register(
@@ -38,6 +38,7 @@ export default function AdminDashboard() {
   const [students, setStudents] = useState<Student[]>([]);
   const [sessions, setSessions] = useState<AttendanceSession[]>([]);
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
+  const [teachersCount, setTeachersCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState<'weekly' | 'monthly' | 'yearly'>('monthly');
   const [pivotDate, setPivotDate] = useState(new Date());
@@ -72,6 +73,13 @@ export default function AdminDashboard() {
     try {
       const schoolSnap = await getDocs(query(collection(db, 'schools'), where('adminId', '==', user?.uid)));
       if (!schoolSnap.empty) setSchoolData(schoolSnap.docs[0].data());
+
+      const tSnap = await getDocs(query(
+        collection(db, 'users'), 
+        where('schoolId', '==', user.schoolId),
+        where('role', '==', 'teacher')
+      ));
+      setTeachersCount(tSnap.size);
 
       const cSnap = await getDocs(query(collection(db, 'classes'), where('schoolId', '==', user.schoolId)));
       const classesData = cSnap.docs.map(d => ({ id: d.id, ...d.data() } as ClassSection));
@@ -134,6 +142,7 @@ export default function AdminDashboard() {
     
     return [
       { label: 'Total Students', value: totalStudents, icon: Users, color: 'text-brand-900', bg: 'bg-brand-200/30' },
+      { label: 'Teachers', value: teachersCount, icon: User, color: 'text-brand-900', bg: 'bg-brand-200/30' },
       { label: 'Classes', value: totalClasses, icon: GraduationCap, color: 'text-brand-900', bg: 'bg-brand-200/30' },
       { label: 'Avg. Attendance', value: `${avgAttendance.toFixed(1)}%`, icon: BarChart3, color: 'text-brand-900', bg: 'bg-brand-200/30' },
       { label: 'Total Sessions', value: sessions.length, icon: Calendar, color: 'text-brand-900', bg: 'bg-brand-200/30' }
@@ -277,7 +286,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6">
         {getOverallStats().map((stat, idx) => {
           const Icon = stat.icon;
           return (
